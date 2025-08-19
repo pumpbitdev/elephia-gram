@@ -46,7 +46,9 @@ bot.hears('💹 Realizar Cambio', (ctx) => exchangeFlow.start(ctx));
 bot.on('text', (ctx) => {
     if (ctx.session?.flow === 'register') registerFlow.handle(ctx);
     else if (ctx.session?.flow === 'exchange') exchangeFlow.handle(ctx);
-    else ctx.reply("🤔 No estoy seguro de entenderte...");
+    else ctx.reply("🤔 No estoy seguro de entenderte...", Markup.keyboard([
+        ['👤 Registrarme', '💹 Realizar Cambio']
+    ]).resize());
 });
 
 bot.on('photo', (ctx) => {
