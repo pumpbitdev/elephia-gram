@@ -2,29 +2,46 @@
 import { Telegraf, Markup, session } from 'telegraf';
 import registerFlow from './flows/register.js';
 import exchangeFlow from './flows/exchange.js';
-import { initializeDatabase, getAllUserIds } from './db.js';
+import { initializeDatabase, getAllUserIds, findUserById } from './db.js'; // Importamos la nueva función
 import 'dotenv/config';
 
-// ID del administrador que puede usar comandos especiales
 const ADMIN_ID = parseInt(process.env.ADMIN_ID || '0');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Middleware de sesión
 bot.use(session({
     defaultSession: () => ({ flow: null, step: null })
 }));
 
-// Comandos de usuario
-bot.start((ctx) => {
-    ctx.reply('¡Hola! 👋 Soy tu asistente de exchange...', Markup.keyboard([
-        ['👤 Registrarme', '💹 Realizar Cambio']
-    ]).resize());
+// --- MANEJADOR /start MEJORADO ---
+bot.start(async (ctx) => {
+    const userId = ctx.from.id;
+    const isRegistered = await findUserById(userId);
+
+    let welcomeMessage;
+    let keyboard;
+
+    if (isRegistered) {
+        welcomeMessage = `¡Hola de nuevo, ${ctx.from.first_name}! 👋 Qué bueno verte por aquí. ¿Qué deseas hacer hoy?`;
+        keyboard = Markup.keyboard([
+            ['💹 Realizar Cambio', '💳 Mis Métodos de Pago'],
+            ['ℹ️ Ayuda']
+        ]).resize();
+    } else {
+        welcomeMessage = '¡Hola! 👋 Soy tu asistente de exchange. Para comenzar, por favor, regístrate.';
+        keyboard = Markup.keyboard([
+            ['👤 Registrarme', 'ℹ️ Ayuda']
+        ]).resize();
+    }
+
+    ctx.reply(welcomeMessage, keyboard);
 });
 
-bot.command('help', (ctx) => ctx.reply('Usa los botones...'));
+bot.command('help', (ctx) => ctx.reply('Usa los botones del menú para interactuar conmigo.'));
+bot.hears('ℹ️ Ayuda', (ctx) => ctx.reply('Usa los botones del menú para interactuar conmigo.'));
 
-// Comandos de administrador
+
+// ... (código del broadcast) ...
 bot.command('broadcast', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) {
         return ctx.reply('❌ No tienes permiso para usar este comando.');
@@ -38,19 +55,30 @@ bot.command('broadcast', (ctx) => {
     broadcastMessage(ctx, message);
 });
 
-// Manejadores de botones
+// --- LÓGICA DE MANEJADORES ---
+// Prevenimos que un usuario no registrado inicie flujos no permitidos
 bot.hears('👤 Registrarme', (ctx) => registerFlow.start(ctx));
-bot.hears('💹 Realizar Cambio', (ctx) => exchangeFlow.start(ctx));
+bot.hears('💹 Realizar Cambio', async (ctx) => {
+    const isRegistered = await findUserById(ctx.from.id);
+    if (!isRegistered) {
+        return ctx.reply('Debes registrarte primero para poder realizar un cambio. Usa el botón "Registrarme".');
+    }
+    exchangeFlow.start(ctx);
+});
 
-// Manejadores de eventos
 bot.on('text', (ctx) => {
     if (ctx.session?.flow === 'register') registerFlow.handle(ctx);
     else if (ctx.session?.flow === 'exchange') exchangeFlow.handle(ctx);
-    else ctx.reply("🤔 No estoy seguro de entenderte...", Markup.keyboard([
-        ['👤 Registrarme', '💹 Realizar Cambio']
-    ]).resize());
+    else {
+         // Evita responder si el texto coincide con un botón que ya tiene un 'hears'
+        if (!['👤 Registrarme', '💹 Realizar Cambio', 'ℹ️ Ayuda', '💳 Mis Métodos de Pago'].includes(ctx.message.text)) {
+            ctx.reply("🤔 No estoy seguro de entenderte. Por favor, elige una de las opciones del teclado.");
+        }
+    }
 });
 
+
+// ... (código de 'on photo' y broadcastMessage) ...
 bot.on('photo', (ctx) => {
     if (ctx.session?.flow === 'exchange' && ctx.session?.step === 'payment') {
         exchangeFlow.handle(ctx);
@@ -59,7 +87,6 @@ bot.on('photo', (ctx) => {
     }
 });
 
-// Función de Broadcast
 async function broadcastMessage(ctx, message) {
     ctx.reply('🚀 Iniciando el envío masivo...');
     const userIds = await getAllUserIds();
@@ -74,11 +101,12 @@ async function broadcastMessage(ctx, message) {
             console.error(`Error enviando mensaje a ${id}:`, error.description);
             errorCount++;
         }
-        await new Promise(resolve => setTimeout(resolve, 100)); // Pausa de 100ms
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     ctx.reply(`✅ Envío completado.\n\nMensajes exitosos: ${successCount}\nErrores: ${errorCount}`);
 }
+
 
 // Iniciar el bot
 async function startBot() {
@@ -90,6 +118,5 @@ async function startBot() {
 
 startBot();
 
-// Manejo de errores y cierre del proceso
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
