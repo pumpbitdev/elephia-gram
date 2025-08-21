@@ -1,9 +1,20 @@
 
 import { Markup } from 'telegraf';
-import { processPaymentImage } from '../services/image-service.js';
+import { createTransaction } from '../db.js';
+import { processPaymentImage } from '../services/image-service.js'; // <-- Importamos el servicio
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 const TASA_BOLIVAR = 196;
 const COMISION_USD = 1;
+
+// Directorio para guardar temporalmente los comprobantes
+const DOWNLOAD_DIR = path.resolve('downloads');
+if (!fs.existsSync(DOWNLOAD_DIR)) {
+    fs.mkdirSync(DOWNLOAD_DIR);
+}
+
 
 const exchangeFlow = {
     start: (ctx) => {
@@ -13,9 +24,10 @@ const exchangeFlow = {
             ['📈 Comprar Zinli', '📉 Vender Zinli']
         ]).resize());
     },
-    handle: (ctx) => {
+    handle: async (ctx) => {
         switch (ctx.session.step) {
-            case 'action':
+            // ... (otros casos sin cambios)
+             case 'action':
                 ctx.session.action = ctx.message.text.includes('Comprar') ? 'Comprar' : 'Vender';
                 ctx.session.step = 'select_amount';
                 ctx.reply(`Perfecto. ¿Qué cantidad de saldo Zinli deseas ${ctx.session.action.toLowerCase()}?`, Markup.keyboard([
@@ -36,7 +48,6 @@ const exchangeFlow = {
                         return;
                     }
                     ctx.session.amount = amount;
-                    // Procede a la confirmación
                     showConfirmation(ctx);
                     ctx.session.step = 'confirm';
                 }
@@ -57,7 +68,6 @@ const exchangeFlow = {
                 if (ctx.message.text.includes('Sí')) {
                     ctx.session.step = 'payment';
                     ctx.reply('💸 ¡Genial! Para continuar, por favor, realiza el pago y envíame una captura de pantalla del comprobante.');
-                    // Aquí podrías añadir los detalles de la cuenta de pago.
                 } else {
                     ctx.session.flow = null;
                     ctx.session.step = null;
@@ -70,24 +80,66 @@ const exchangeFlow = {
                     ctx.reply('Por favor, envíame una imagen del comprobante de pago.');
                     return;
                 }
-                ctx.reply('🤖 Procesando tu comprobante... Esto puede tardar un momento, por favor espera.');
-                const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-                ctx.telegram.getFileLink(fileId).then(url => {
-                    const result = processPaymentImage(url.href);
+                ctx.reply('🤖 Analizando tu comprobante... Esto puede tardar unos segundos.');
+                
+                let imagePath = '';
 
-                        if (result.success) {
-                            let finalMessage = '¡Verificación exitosa! ✨\n\n' + result.success;
-                            ctx.reply(finalMessage)
-                        } else {
-                            ctx.reply('No pude confirmar la referencia en la imagen. Por favor, envíala de nuevo.');
-                        }
-                });
+                try {
+                    // 1. Descargar la imagen del comprobante
+                    const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+                    const url = await ctx.telegram.getFileLink(fileId);
+                    const response = await axios({ url: url.href, responseType: 'stream' });
+                    
+                    imagePath = path.join(DOWNLOAD_DIR, `${fileId}.jpg`);
+                    const writer = fs.createWriteStream(imagePath);
+                    response.data.pipe(writer);
+                    
+                    await new Promise((resolve, reject) => {
+                        writer.on('finish', resolve);
+                        writer.on('error', reject);
+                    });
+
+                    // 2. Usar el servicio de imágenes para procesarla
+                    const result = await processPaymentImage(imagePath);
+
+                    if (!result.success) {
+                        ctx.reply(`❌ Error al leer el comprobante: ${result.error} Por favor, inténtalo de nuevo o contacta a soporte.`);
+                        return;
+                    }
+                    
+                    // 3. Si tuvo éxito, guardar la transacción
+                    const transactionData = {
+                        user_telegram_id: ctx.from.id,
+                        transaction_type: ctx.session.action,
+                        amount_usd: ctx.session.amount,
+                        commission_usd: COMISION_USD,
+                        total_usd: ctx.session.amount + COMISION_USD,
+                        rate_bs: TASA_BOLIVAR,
+                        total_bs: (ctx.session.amount + COMISION_USD) * TASA_BOLIVAR,
+                        payment_reference: result.referenceId
+                    };
+
+                    await createTransaction(transactionData);
+
+                    ctx.reply(`✅ ¡Pago recibido! Tu orden ha sido creada con la referencia #${result.referenceId} y está en estado "pendiente". Te notificaremos pronto.`);
+
+                } catch (error) {
+                    console.error("Error en el procesamiento del pago:", error);
+                    ctx.reply("❌ Hubo un error técnico procesando tu comprobante. Por favor, contacta a soporte.");
+                } finally {
+                    // 4. Limpiar la sesión y el archivo temporal
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                    }
+                    ctx.session.flow = null;
+                    ctx.session.step = null;
+                }
                 break;
         }
     }
 };
 
-// Función auxiliar para mostrar el resumen de la operación
+// ... (función showConfirmation sin cambios) ...
 function showConfirmation(ctx) {
     const amountToReceive = ctx.session.amount;
     const totalInUSD = amountToReceive + COMISION_USD;
@@ -110,3 +162,4 @@ function showConfirmation(ctx) {
 }
 
 export default exchangeFlow;
+
