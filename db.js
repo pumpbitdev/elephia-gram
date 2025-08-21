@@ -93,6 +93,17 @@ export async function findUserById(userId) {
     }
 }
 
+export async function historyMessages(userId){
+    const query = 'SELECT * FROM transactions WHERE user_telegram_id = ?;';
+    try {
+        const [rows] = await pool.query(query, [userId]);
+        return rows;
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        return [];
+    }
+}
+
 export async function getPaymentMethodsForUser(userId) {
     const query = 'SELECT id, method_type, details, nickname FROM payment_methods WHERE user_telegram_id = ?;';
     try {

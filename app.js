@@ -2,7 +2,7 @@
 import { Telegraf, Markup, session } from 'telegraf';
 import registerFlow from './flows/register.js';
 import exchangeFlow from './flows/exchange.js';
-import { initializeDatabase, getAllUserIds, findUserById } from './db.js'; // Importamos la nueva función
+import { initializeDatabase, getAllUserIds, findUserById, historyMessages } from './db.js'; // Importamos la nueva función
 import 'dotenv/config';
 
 const ADMIN_ID = parseInt(process.env.ADMIN_ID || '0');
@@ -38,6 +38,7 @@ bot.start(async (ctx) => {
 });
 
 bot.command('help', (ctx) => ctx.reply('Usa los botones del menú para interactuar conmigo.'));
+bot.command('historial', (ctx) => ctx.reply(historyMessages(ctx.from.id)));
 bot.hears('ℹ️ Ayuda', (ctx) => ctx.reply('Usa los botones del menú para interactuar conmigo.'));
 
 
