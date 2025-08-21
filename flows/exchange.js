@@ -1,7 +1,7 @@
 
 import { Markup } from 'telegraf';
 import Tesseract from 'tesseract.js';
-import { processPaymentImage } from './services/image-service.js';
+import { processPaymentImage } from '../services/image-service';
 
 const TASA_BOLIVAR = 196;
 const COMISION_USD = 1;
