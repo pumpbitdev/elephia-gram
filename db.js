@@ -2,6 +2,7 @@
 import mysql from 'mysql2/promise';
 import 'dotenv/config';
 
+// ... (pool de conexiones) ...
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -12,13 +13,12 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
+// ... (initializeDatabase y otras funciones de usuario) ...
 export async function initializeDatabase() {
     try {
         const connection = await pool.getConnection();
         console.log('Successfully connected to the database.');
-
-        // ... (código de tablas users y payment_methods) ...
-         await connection.query(`
+        await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 telegram_id BIGINT PRIMARY KEY,
                 username VARCHAR(255),
@@ -40,8 +40,6 @@ export async function initializeDatabase() {
                 FOREIGN KEY (user_telegram_id) REFERENCES users(telegram_id) ON DELETE CASCADE
             )
         `);
-
-        // --- TABLA DE TRANSACCIONES ACTUALIZADA ---
         await connection.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,21 +50,18 @@ export async function initializeDatabase() {
                 total_usd DECIMAL(10, 2) NOT NULL,
                 rate_bs DECIMAL(10, 2) NOT NULL,
                 total_bs DECIMAL(10, 2) NOT NULL,
-                payment_reference VARCHAR(255), -- Columna para la referencia
+                payment_reference VARCHAR(255),
                 status ENUM('Pendiente', 'Completada', 'Fallida') DEFAULT 'Pendiente',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_telegram_id) REFERENCES users(telegram_id)
             )
         `);
-        console.log('`transactions` table is ready.');
-        
+        console.log('All tables are ready.');
         connection.release();
     } catch (error) {
         console.error('Error initializing database:', error);
     }
 }
-
-// ... (resto de funciones) ...
 export async function addUser(userData) {
     const { telegram_id, username, first_name, last_name, email, phone } = userData;
     const query = `
@@ -81,7 +76,6 @@ export async function addUser(userData) {
         console.error('Error adding/updating user:', error);
     }
 }
-
 export async function findUserById(userId) {
     const query = 'SELECT telegram_id FROM users WHERE telegram_id = ? LIMIT 1;';
     try {
@@ -92,18 +86,6 @@ export async function findUserById(userId) {
         return false;
     }
 }
-
-export async function historyMessages(userId){
-    const query = 'SELECT * FROM transactions WHERE user_telegram_id = ?;';
-    try {
-        const [rows] = await pool.query(query, [userId]);
-        return rows;
-    } catch (error) {
-        console.error('Error fetching history:', error);
-        return [];
-    }
-}
-
 export async function getPaymentMethodsForUser(userId) {
     const query = 'SELECT id, method_type, details, nickname FROM payment_methods WHERE user_telegram_id = ?;';
     try {
@@ -114,7 +96,6 @@ export async function getPaymentMethodsForUser(userId) {
         return [];
     }
 }
-
 export async function addPaymentMethod(userId, methodType, details, nickname) {
     const query = 'INSERT INTO payment_methods (user_telegram_id, method_type, details, nickname) VALUES (?, ?, ?, ?);';
     try {
@@ -123,7 +104,6 @@ export async function addPaymentMethod(userId, methodType, details, nickname) {
         console.error('Error adding payment method:', error);
     }
 }
-
 export async function getAllUserIds() {
     const query = 'SELECT telegram_id FROM users;';
     try {
@@ -134,8 +114,6 @@ export async function getAllUserIds() {
         return [];
     }
 }
-
-// --- FUNCIÓN DE TRANSACCIÓN ACTUALIZADA ---
 export async function createTransaction(transactionData) {
     const {
         user_telegram_id,
@@ -145,7 +123,7 @@ export async function createTransaction(transactionData) {
         total_usd,
         rate_bs,
         total_bs,
-        payment_reference // Nuevo campo
+        payment_reference
     } = transactionData;
 
     const query = `
@@ -155,9 +133,26 @@ export async function createTransaction(transactionData) {
     `;
     try {
         await pool.query(query, [user_telegram_id, transaction_type, amount_usd, commission_usd, total_usd, rate_bs, total_bs, payment_reference]);
-        console.log(`New transaction recorded for user ${user_telegram_id} with reference ${payment_reference}`);
-    } catch (error)
- {
+    } catch (error) {
         console.error('Error creating transaction:', error);
+    }
+}
+
+
+// --- NUEVA FUNCIÓN PARA EL HISTORIAL ---
+export async function getTransactionHistory(userId) {
+    const query = `
+        SELECT transaction_type, total_usd, status, created_at 
+        FROM transactions 
+        WHERE user_telegram_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 10;
+    `;
+    try {
+        const [rows] = await pool.query(query, [userId]);
+        return rows;
+    } catch (error) {
+        console.error('Error fetching transaction history:', error);
+        return []; // Devuelve un array vacío en caso de error
     }
 }
