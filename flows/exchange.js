@@ -1,6 +1,7 @@
 
 import { Markup } from 'telegraf';
 import Tesseract from 'tesseract.js';
+import { processPaymentImage } from './services/image-service.js';
 
 const TASA_BOLIVAR = 196;
 const COMISION_USD = 1;
@@ -73,16 +74,14 @@ const exchangeFlow = {
                 ctx.reply('🤖 Procesando tu comprobante... Esto puede tardar un momento, por favor espera.');
                 const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
                 ctx.telegram.getFileLink(fileId).then(url => {
-                    Tesseract.recognize(
-                        url.href,
-                        'eng',
-                        { logger: m => console.log(m) }
-                    ).then(({ data: { text } }) => {
-                        console.log('Resultado de Tesseract:', text);
-                        ctx.session.flow = null;
-                        ctx.session.step = null;
-                        ctx.reply('✅ ¡Pago recibido! Hemos creado tu orden y se encuentra en estado "pendiente". Te notificaremos tan pronto como sea procesada. 🚀');
-                    });
+                    const result = processPaymentImage(url.href);
+
+                        if (result.success) {
+                            let finalMessage = '¡Verificación exitosa! ✨\n\n' + result.success;
+                            ctx.reply(finalMessage)
+                        } else {
+                            ctx.reply('No pude confirmar la referencia en la imagen. Por favor, envíala de nuevo.');
+                        }
                 });
                 break;
         }
