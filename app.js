@@ -6,37 +6,48 @@ import { initializeDatabase, findUserById } from './db.js';
 import { registerCommands } from './bot/commands.js';
 import registerFlow from './flows/register.js';
 import exchangeFlow from './flows/exchange.js';
+import paymentMethodsFlow from './flows/payment-methods.js'; // <-- 1. IMPORTAR EL NUEVO FLUJO
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// 1. Registrar Middlewares
+// 1. Middlewares
 bot.use(session({
     defaultSession: () => ({ flow: null, step: null })
 }));
 
-// 2. Registrar todos los comandos y sus 'hears' desde el archivo externo
+// 2. Comandos
 registerCommands(bot);
 
-// 3. Registrar los 'hears' que inician flujos de conversación
+// 3. 'hears' para iniciar flujos
 bot.hears('👤 Registrarme', (ctx) => registerFlow.start(ctx));
 
 bot.hears('💹 Realizar Cambio', async (ctx) => {
-    // Verificación para proteger el flujo
     if (!(await findUserById(ctx.from.id))) {
         return ctx.reply('Debes registrarte primero para poder realizar un cambio.');
     }
     exchangeFlow.start(ctx);
 });
 
-// 4. Registrar manejadores generales para los flujos activos
+// --- 2. NUEVO 'hears' PARA EL FLUJO DE MÉTODOS DE PAGO ---
+bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
+    if (!(await findUserById(ctx.from.id))) {
+        return ctx.reply('Debes registrarte primero para gestionar tus métodos de pago.');
+    }
+    paymentMethodsFlow.start(ctx);
+});
+
+
+// 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
     if (ctx.session?.flow === 'register') {
         registerFlow.handle(ctx);
     } else if (ctx.session?.flow === 'exchange') {
         exchangeFlow.handle(ctx);
-    } else {
-        // Evita responder a botones que ya tienen un manejador dedicado en commands.js
+    } else if (ctx.session?.flow === 'payment_methods') { // <-- 3. AÑADIR CONDICIÓN PARA EL NUEVO FLUJO
+        paymentMethodsFlow.handle(ctx);
+    }
+    else {
         if (!['👤 Registrarme', '💹 Realizar Cambio', 'ℹ️ Ayuda', '💳 Mis Métodos de Pago', '📜 Mi Historial'].includes(text)) {
             ctx.reply("🤔 No estoy seguro de entenderte. Por favor, elige una de las opciones del teclado.");
         }
@@ -62,6 +73,5 @@ async function startBot() {
 
 startBot();
 
-// Manejo de cierre del proceso para apagar el bot de forma segura
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

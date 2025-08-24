@@ -2,7 +2,6 @@
 import mysql from 'mysql2/promise';
 import 'dotenv/config';
 
-// ... (pool de conexiones) ...
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -13,11 +12,12 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// ... (initializeDatabase y otras funciones de usuario) ...
 export async function initializeDatabase() {
     try {
         const connection = await pool.getConnection();
         console.log('Successfully connected to the database.');
+
+        // ... (tabla users sin cambios)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 telegram_id BIGINT PRIMARY KEY,
@@ -29,17 +29,30 @@ export async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        
+        // --- TABLA payment_methods MODIFICADA ---
         await connection.query(`
             CREATE TABLE IF NOT EXISTS payment_methods (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_telegram_id BIGINT NOT NULL,
-                method_type VARCHAR(50) NOT NULL,
-                details VARCHAR(255) NOT NULL,
+                method_type ENUM('PayPal', 'Zinli', 'PagoMovil') NOT NULL,
                 nickname VARCHAR(100) NOT NULL,
+                
+                -- Campo para PayPal (email) o Zinli (email/teléfono)
+                account_details VARCHAR(255), 
+                
+                -- Campos específicos para Pago Móvil (pueden ser nulos)
+                pm_identity_card VARCHAR(20),
+                pm_phone_number VARCHAR(20),
+                pm_bank_name VARCHAR(100),
+
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_telegram_id) REFERENCES users(telegram_id) ON DELETE CASCADE
             )
         `);
+        console.log('`payment_methods` table is ready.');
+
+        // ... (tabla transactions sin cambios)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -56,12 +69,14 @@ export async function initializeDatabase() {
                 FOREIGN KEY (user_telegram_id) REFERENCES users(telegram_id)
             )
         `);
-        console.log('All tables are ready.');
+        
         connection.release();
     } catch (error) {
         console.error('Error initializing database:', error);
     }
 }
+
+// ... (funciones de usuario sin cambios)
 export async function addUser(userData) {
     const { telegram_id, username, first_name, last_name, email, phone } = userData;
     const query = `
@@ -86,24 +101,6 @@ export async function findUserById(userId) {
         return false;
     }
 }
-export async function getPaymentMethodsForUser(userId) {
-    const query = 'SELECT id, method_type, details, nickname FROM payment_methods WHERE user_telegram_id = ?;';
-    try {
-        const [rows] = await pool.query(query, [userId]);
-        return rows;
-    } catch (error) {
-        console.error('Error fetching payment methods:', error);
-        return [];
-    }
-}
-export async function addPaymentMethod(userId, methodType, details, nickname) {
-    const query = 'INSERT INTO payment_methods (user_telegram_id, method_type, details, nickname) VALUES (?, ?, ?, ?);';
-    try {
-        await pool.query(query, [userId, methodType, details, nickname]);
-    } catch (error) {
-        console.error('Error adding payment method:', error);
-    }
-}
 export async function getAllUserIds() {
     const query = 'SELECT telegram_id FROM users;';
     try {
@@ -114,6 +111,37 @@ export async function getAllUserIds() {
         return [];
     }
 }
+
+
+// --- FUNCIONES DE MÉTODOS DE PAGO MODIFICADAS ---
+export async function getPaymentMethodsForUser(userId) {
+    // Seleccionamos todas las columnas para poder mostrar los detalles correctos
+    const query = 'SELECT * FROM payment_methods WHERE user_telegram_id = ?;';
+    try {
+        const [rows] = await pool.query(query, [userId]);
+        return rows;
+    } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        return [];
+    }
+}
+
+export async function addPaymentMethod(userId, data) {
+    const { method_type, nickname, account_details, pm_identity_card, pm_phone_number, pm_bank_name } = data;
+    const query = `
+        INSERT INTO payment_methods 
+        (user_telegram_id, method_type, nickname, account_details, pm_identity_card, pm_phone_number, pm_bank_name) 
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+    `;
+    try {
+        await pool.query(query, [userId, method_type, nickname, account_details, pm_identity_card, pm_phone_number, pm_bank_name]);
+        console.log(`New payment method added for user ${userId}`);
+    } catch (error) {
+        console.error('Error adding payment method:', error);
+    }
+}
+
+// ... (funciones de transacciones sin cambios)
 export async function createTransaction(transactionData) {
     const {
         user_telegram_id,
@@ -137,9 +165,6 @@ export async function createTransaction(transactionData) {
         console.error('Error creating transaction:', error);
     }
 }
-
-
-// --- NUEVA FUNCIÓN PARA EL HISTORIAL ---
 export async function getTransactionHistory(userId) {
     const query = `
         SELECT transaction_type, total_usd, status, created_at 
@@ -153,6 +178,6 @@ export async function getTransactionHistory(userId) {
         return rows;
     } catch (error) {
         console.error('Error fetching transaction history:', error);
-        return []; // Devuelve un array vacío en caso de error
+        return [];
     }
 }
