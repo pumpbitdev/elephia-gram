@@ -1,7 +1,8 @@
 
 import { Markup } from 'telegraf';
 import { createTransaction } from '../db.js';
-import { processPaymentImage } from '../services/image-service.js'; // <-- Importamos el servicio
+import { processPaymentImage } from '../services/image-service.js';
+import { mainKeyboard } from '../bot/keyboards.js' // <-- Importamos el servicio
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
@@ -121,7 +122,7 @@ const exchangeFlow = {
 
                     await createTransaction(transactionData);
 
-                    ctx.reply(`✅ ¡Pago recibido! Tu orden ha sido creada con la referencia #${result.referenceId} y está en estado "pendiente". Te notificaremos pronto.`);
+                    ctx.reply(`✅ ¡Pago recibido! Tu orden ha sido creada con la referencia #${result.referenceId} y está en estado "pendiente". Te notificaremos pronto.`, mainKeyboard);
 
                 } catch (error) {
                     console.error("Error en el procesamiento del pago:", error);
