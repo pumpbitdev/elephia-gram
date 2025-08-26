@@ -7,7 +7,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-const TASA_BOLIVAR = 196;
+const TASA_BOLIVAR = 225;
 const COMISION_USD = 1;
 
 // Directorio para guardar temporalmente los comprobantes
