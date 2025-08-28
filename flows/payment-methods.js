@@ -85,13 +85,26 @@ async function showMenu(ctx) {
 
 function handleMethodTypeSelection(ctx) {
     const selection = ctx.message.text;
-    if (!['PayPal', 'Zinli', 'Pago Móvil'].includes(selection)) {
-        ctx.reply('Por favor, selecciona una opción válida del teclado.');
-        return;
-    }
+    let methodType;
+
     // --- LA CORRECCIÓN ESTÁ AQUÍ ---
-    // 'Pago Móvil'.replace(' ', '') se convierte en 'PagoMovil'
-    ctx.session.paymentData = { method_type: selection.replace(' ', '') };
+    // Mapeamos la entrada del usuario al valor ENUM correcto de la BD
+    switch (selection) {
+        case 'PayPal':
+            methodType = 'PayPal';
+            break;
+        case 'Zinli':
+            methodType = 'Zinli';
+            break;
+        case 'Pago Móvil':
+            methodType = 'PagoMovil';
+            break;
+        default:
+            ctx.reply('Por favor, selecciona una opción válida del teclado.');
+            return;
+    }
+    
+    ctx.session.paymentData = { method_type: methodType };
     ctx.session.step = 'add_nickname';
     ctx.reply(`Perfecto. Dale un apodo a este método (Ej: "Pago Móvil Personal"):`, cancelKeyboard);
 }
