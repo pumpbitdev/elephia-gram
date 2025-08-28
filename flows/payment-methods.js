@@ -1,6 +1,7 @@
 
 import { Markup } from 'telegraf';
 import { addPaymentMethod, getPaymentMethodsForUser } from '../db.js';
+import { mainKeyboard, cancelKeyboard } from '../bot/keyboards.js';
 
 const paymentMethodsFlow = {
     start: (ctx) => {
@@ -13,21 +14,15 @@ const paymentMethodsFlow = {
         const text = ctx.message.text;
         const step = ctx.session.step;
 
-        // Opción para cancelar en cualquier momento
         if (text === '⬅️ Cancelar') {
             ctx.session.flow = null;
             ctx.session.step = null;
             ctx.session.paymentData = null;
-            // Mostramos el menú principal de un usuario registrado
-            ctx.reply('Operación cancelada. Volviendo al menú principal.', Markup.keyboard([
-                ['💹 Realizar Cambio', '📜 Mi Historial'],
-                ['💳 Mis Métodos de Pago', 'ℹ️ Ayuda']
-            ]).resize());
+            ctx.reply('Operación cancelada. Volviendo al menú principal.', mainKeyboard);
             return;
         }
 
         switch (step) {
-            // --- ESTE ES EL CASO QUE FALTABA ---
             case 'menu':
                 if (text === '➕ Añadir Nuevo Método') {
                     ctx.session.step = 'add_method_type';
@@ -36,12 +31,8 @@ const paymentMethodsFlow = {
                         ['⬅️ Cancelar']
                     ]).resize());
                 } else if (text === '⬅️ Volver al Menú Principal') {
-                    ctx.session.flow = null; // Salimos del flujo
-                    // Simulamos /start para mostrar el menú principal
-                     ctx.reply('Volviendo al menú principal.', Markup.keyboard([
-                        ['💹 Realizar Cambio', '📜 Mi Historial'],
-                        ['💳 Mis Métodos de Pago', 'ℹ️ Ayuda']
-                    ]).resize());
+                    ctx.session.flow = null;
+                    ctx.reply('Volviendo al menú principal.', mainKeyboard);
                 }
                 break;
 
@@ -74,8 +65,6 @@ const paymentMethodsFlow = {
     }
 };
 
-// --- Funciones auxiliares (sin cambios, pero incluidas para el contexto) ---
-
 async function showMenu(ctx) {
     const userId = ctx.from.id;
     const methods = await getPaymentMethodsForUser(userId);
@@ -100,9 +89,11 @@ function handleMethodTypeSelection(ctx) {
         ctx.reply('Por favor, selecciona una opción válida del teclado.');
         return;
     }
-    ctx.session.paymentData = { method_type: selection.replace(' ', 'PagoMovil') };
+    // --- LA CORRECCIÓN ESTÁ AQUÍ ---
+    // 'Pago Móvil'.replace(' ', '') se convierte en 'PagoMovil'
+    ctx.session.paymentData = { method_type: selection.replace(' ', '') };
     ctx.session.step = 'add_nickname';
-    ctx.reply(`Perfecto. Dale un apodo a este método (Ej: "PayPal Personal"):`, Markup.keyboard([['⬅️ Cancelar']]).resize());
+    ctx.reply(`Perfecto. Dale un apodo a este método (Ej: "Pago Móvil Personal"):`, cancelKeyboard);
 }
 
 function askForDetails(ctx) {
@@ -124,10 +115,7 @@ async function savePaymentMethod(ctx) {
     ctx.session.step = null;
     ctx.session.paymentData = null;
     
-    ctx.reply('¿Qué deseas hacer ahora?', Markup.keyboard([
-        ['💹 Realizar Cambio', '📜 Mi Historial'],
-        ['💳 Mis Métodos de Pago', 'ℹ️ Ayuda']
-    ]).resize());
+    ctx.reply('¿Qué deseas hacer ahora?', mainKeyboard);
 }
 
 export default paymentMethodsFlow;
