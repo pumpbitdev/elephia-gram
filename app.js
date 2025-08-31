@@ -36,6 +36,12 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
     paymentMethodsFlow.start(ctx);
 });
 
+bot.hears('Hola'), async (ctx) => {
+    ctx.reply('Hola, ¿en qué puedo ayudarte hoy? \n',
+        'hola'
+    );
+}
+
 
 // 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
