@@ -40,15 +40,17 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
 // 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
+    if (text === 'hola') {
+        ctx.reply('Operación cancelada. Volviendo al menú principal.');
+    }
+
     if (ctx.session?.flow === 'register') {
         registerFlow.handle(ctx);
     } else if (ctx.session?.flow === 'exchange') {
         exchangeFlow.handle(ctx);
     } else if (ctx.session?.flow === 'payment_methods') { // <-- 3. AÑADIR CONDICIÓN PARA EL NUEVO FLUJO
         paymentMethodsFlow.handle(ctx);
-    } else if (text.toLowerCase == 'hola') {
-        bot.reply('Hola');
-    }
+    } 
     else {
         if (!['👤 Registrarme', '💹 Realizar Cambio', 'ℹ️ Ayuda', '💳 Mis Métodos de Pago', '📜 Mi Historial'].includes(text)) {
             ctx.reply("🤔 No estoy seguro de entenderte. Por favor, elige una de las opciones del teclado.");
