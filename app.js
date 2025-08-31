@@ -7,6 +7,7 @@ import { registerCommands } from './bot/commands.js';
 import registerFlow from './flows/register.js';
 import exchangeFlow from './flows/exchange.js';
 import paymentMethodsFlow from './flows/payment-methods.js'; // <-- 1. IMPORTAR EL NUEVO FLUJO
+import { mainKeyboard } from './bot/keyboards.js';
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -40,8 +41,9 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
 // 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
-    if (text === 'hola') {
-        ctx.reply('Operación cancelada. Volviendo al menú principal.');
+    if (text.toLowerCase === 'hola') {
+        ctx.reply('Operación cancelada. Volviendo al menú principal.', mainKeyboard);
+        return;
     }
 
     if (ctx.session?.flow === 'register') {
