@@ -36,12 +36,6 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
     paymentMethodsFlow.start(ctx);
 });
 
-bot.hears('Hola', async (ctx) => {
-    ctx.reply('Hola, ¿en qué puedo ayudarte hoy? \n',
-        'hola'
-    );
-});
-
 
 // 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
@@ -52,6 +46,8 @@ bot.on('text', (ctx) => {
         exchangeFlow.handle(ctx);
     } else if (ctx.session?.flow === 'payment_methods') { // <-- 3. AÑADIR CONDICIÓN PARA EL NUEVO FLUJO
         paymentMethodsFlow.handle(ctx);
+    } else if (text.toLowerCase == 'hola') {
+        bot.reply('Hola');
     }
     else {
         if (!['👤 Registrarme', '💹 Realizar Cambio', 'ℹ️ Ayuda', '💳 Mis Métodos de Pago', '📜 Mi Historial'].includes(text)) {
