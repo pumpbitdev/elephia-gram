@@ -42,7 +42,15 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
     if (text === 'hola' || text === 'Hola') {
-        ctx.reply('Operación cancelada. Volviendo al menú principal.', mainKeyboard);
+        ctx.reply(`🧾 **Elephia Exchange** 🧾\n\n` +
+        `Acción: ${ctx.session.action} Zinli\n\n` +
+        `💰 Monto a recibir: **$${amountToReceive.toFixed(2)} USD**\n` +
+        `➕ Comisión del servicio: **$${COMISION_USD.toFixed(2)} USD**\n\n` +
+        `-------------------------------------\n` +
+        `💵 **Total a Pagar (USD): $${totalInUSD.toFixed(2)}**\n` +
+        `🇻🇪 **Total a Pagar (Bs.): ${totalInBolivares.toFixed(2)}**\n` +
+        `-------------------------------------\n\n` +
+        `¿Confirmas que los datos son correctos?`, mainKeyboard);
         return;
     }
 
