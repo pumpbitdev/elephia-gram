@@ -42,7 +42,15 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
     if (text === 'hola') {
-        ctx.reply('Operación cancelada. Volviendo al menú principal.', mainKeyboard);
+        ctx.reply(
+            `🌟 **Bienvenido a Elephia Exchange** 🌟\n\n` +
+            `¡Hola! Soy tu asistente para operaciones de cambio de divisas.\n\n` +
+            `📝 **Cómo usar el bot:**\n` +
+            `• Escribe **'exchange'** para iniciar una operación de cambio de bolívares\n` +
+            `• Escribe **'historial'** para consultar tu historial de transacciones\n` +
+            `• Escribe **'help'** para obtener ayuda adicional\n\n` +
+            `¡Estoy aquí para ayudarte con tus operaciones! 💱`
+        );
         return;
     }
 
