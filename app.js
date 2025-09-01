@@ -41,7 +41,7 @@ bot.hears('💳 Mis Métodos de Pago', async (ctx) => {
 // 4. Manejadores generales para flujos activos
 bot.on('text', (ctx) => {
     const text = ctx.message.text;
-    if (text.toLowerCase === 'hola') {
+    if (text === 'hola') {
         ctx.reply('Operación cancelada. Volviendo al menú principal.', mainKeyboard);
         return;
     }
