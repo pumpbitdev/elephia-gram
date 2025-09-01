@@ -140,8 +140,7 @@ const exchangeFlow = {
     }
 };
 
-// ... (función showConfirmation sin cambiohowConfirmation(ctxs) ...
-function s) {
+function showConfirmation(ctx) {
     const amountToReceive = ctx.session.amount;
     const totalInUSD = amountToReceive + COMISION_USD;
     const totalInBolivares = totalInUSD * TASA_BOLIVAR;
