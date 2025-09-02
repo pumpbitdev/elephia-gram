@@ -20,7 +20,12 @@ bot.use(session({
 registerCommands(bot);
 
 // 3. 'hears' para iniciar flujos
-bot.hears('👤 Registrarme', (ctx) => registerFlow.start(ctx));
+bot.hears('👤 Registrarme', async (ctx) => {
+    if (await findUserById(ctx.from.id)) {
+        return ctx.reply('Ya estás registrado.');
+    }
+    registerFlow.start(ctx)
+});
 
 bot.hears('💹 Realizar Cambio', async (ctx) => {
     if (!(await findUserById(ctx.from.id))) {
