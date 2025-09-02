@@ -63,7 +63,15 @@ bot.on('text', (ctx) => {
     } 
     else {
         if (!['👤 Registrarme', '💹 Realizar Cambio', 'ℹ️ Ayuda', '💳 Mis Métodos de Pago', '📜 Mi Historial'].includes(text)) {
-            ctx.reply("🤔 No estoy seguro de entenderte. Por favor, elige una de las opciones del teclado.");
+            ctx.reply(
+                `🌟 **Bienvenido a Elephia Exchange** 🌟\n\n` +
+                `¡Hola! Soy tu asistente para operaciones de cambio de divisas.\n\n` +
+                `📝 **Cómo usar el bot:**\n` +
+                `• Escribe **'exchange'** para iniciar una operación de cambio de bolívares\n` +
+                `• Escribe **'historial'** para consultar tu historial de transacciones\n` +
+                `• Escribe **'help'** para obtener ayuda adicional\n\n` +
+                `¡Estoy aquí para ayudarte con tus operaciones! 💱`, mainKeyboard
+            );
         }
     }
 });
