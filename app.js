@@ -49,7 +49,7 @@ bot.on('text', (ctx) => {
             `• Escribe **'exchange'** para iniciar una operación de cambio de bolívares\n` +
             `• Escribe **'historial'** para consultar tu historial de transacciones\n` +
             `• Escribe **'help'** para obtener ayuda adicional\n\n` +
-            `¡Estoy aquí para ayudarte con tus operaciones! 💱`
+            `¡Estoy aquí para ayudarte con tus operaciones! 💱`, mainKeyboard
         );
         return;
     }
