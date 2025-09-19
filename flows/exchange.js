@@ -69,7 +69,6 @@ const exchangeFlow = {
                 if (ctx.message.text.includes('Sí')) {
                     ctx.session.step = 'payment';
                     ctx.reply('💸 ¡Genial! Para continuar, por favor, realiza el pago y envíame una captura de pantalla del comprobante.');
-                } else {
                     ctx.session.flow = null;
                     ctx.session.step = null;
                     ctx.reply('❌ Operación cancelada. Si cambias de opinión, aquí estaré para ayudarte.');
@@ -158,6 +157,14 @@ function showConfirmation(ctx) {
         Markup.keyboard([
             ['👍 Sí, confirmar', '👎 No, cancelar']
         ]).resize()
+    );
+
+    ctx.reply(
+        `💰 PagoMovil: \n` +
+        `- 0424-3354141` +
+        `- 29.846.137` +
+        `- BNC - 0191` 
+
     );
 }
 
