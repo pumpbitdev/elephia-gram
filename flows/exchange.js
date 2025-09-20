@@ -158,14 +158,6 @@ function showConfirmation(ctx) {
             ['👍 Sí, confirmar', '👎 No, cancelar']
         ]).resize()
     );
-
-    ctx.reply(
-        `💰 PagoMovil: \n` +
-        `- 0424-3354141` +
-        `- 29.846.137` +
-        `- BNC - 0191` 
-
-    );
 }
 
 export default exchangeFlow;
