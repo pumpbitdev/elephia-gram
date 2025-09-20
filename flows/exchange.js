@@ -69,6 +69,7 @@ const exchangeFlow = {
                 if (ctx.message.text.includes('Sí')) {
                     ctx.session.step = 'payment';
                     ctx.reply('💸 ¡Genial! Para continuar, por favor, realiza el pago y envíame una captura de pantalla del comprobante.');
+                }else {
                     ctx.session.flow = null;
                     ctx.session.step = null;
                     ctx.reply('❌ Operación cancelada. Si cambias de opinión, aquí estaré para ayudarte.');
